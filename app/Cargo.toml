@@ -1,0 +1,23 @@
+[package]
+name = "pekswitcher"
+description = "PekSwitcher — keyboard layout switcher"
+version.workspace = true
+edition.workspace = true
+
+[dev-dependencies]
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_UI_Input", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+
+[build-dependencies]
+slint-build = "1"
+embed-resource = "3"
+
+[dependencies]
+# The software renderer keeps memory low; this small window needs no GPU.
+slint = { version = "1", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "accessibility", "raw-window-handle-06"] }
+raw-window-handle = "0.6"
+tray-icon = "0.24"
+png = "0.18"
+serde.workspace = true
+serde_json.workspace = true
+pek-core = { path = "../crates/pek-core" }
+pek-platform = { path = "../crates/pek-platform" }

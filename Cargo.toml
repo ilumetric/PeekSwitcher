@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = ["crates/pek-core", "crates/pek-platform", "app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["PekSwitcher"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+windows-sys = "0.61"
+
+# Day-to-day builds: optimized but incremental, rebuilds take seconds.
+[profile.release]
+opt-level = 3
+incremental = true
+strip = true
+
+# Shipping build (installer, portable folder): cargo build --profile dist -p pekswitcher
+[profile.dist]
+inherits = "release"
+lto = true
+codegen-units = 1
+incremental = false
+
+# Keep the language model fast even in debug builds: loading and scoring ~200k words.
+[profile.dev.package.pek-core]
+opt-level = 2

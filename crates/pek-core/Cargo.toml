@@ -1,0 +1,8 @@
+[package]
+name = "pek-core"
+description = "Platform-independent engine of PekSwitcher: layouts, language model, switching and typo logic"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true

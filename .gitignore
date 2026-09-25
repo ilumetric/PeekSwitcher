@@ -1,0 +1,14 @@
+# Build output
+/target
+/app/gen
+
+# Settings of dev builds (the app keeps them next to the exe)
+/data
+pek-debug.log
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini

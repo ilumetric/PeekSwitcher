@@ -1,0 +1,928 @@
+// PekSwitcher window: a ChatGPT-like main screen and a settings screen.
+
+export global Theme {
+    in property <bool> dark: true;
+    out property <color> bg: dark ? #0d0d0d : #ffffff;
+    out property <color> surface: dark ? #262626 : #ffffff;
+    out property <color> surface2: dark ? #1b1b1b : #f2f2f2;
+    out property <color> raised: dark ? #333333 : #e4e4e4;
+    out property <color> hover: dark ? #ffffff0f : #0000000d;
+    out property <color> text: dark ? #f3f3f3 : #0d0d0d;
+    out property <color> text2: dark ? #b4b4b4 : #5d5d5d;
+    out property <color> text3: dark ? #8a8a8a : #8f8f8f;
+    out property <color> border: dark ? #ffffff1a : #0000001a;
+    out property <color> switch-off: dark ? #3d3d3d : #d9d9d9;
+    out property <color> switch-on: dark ? #f3f3f3 : #0d0d0d;
+    out property <color> knob-on: dark ? #0d0d0d : #ffffff;
+    out property <color> knob-off: dark ? #cfcfcf : #ffffff;
+    out property <color> warn-bg: dark ? #ffb0201a : #ffb02024;
+    out property <color> warn: dark ? #ffc861 : #8a5600;
+}
+
+// Settings and status shared with Rust.
+export global S {
+    in-out property <bool> en;
+    in-out property <string> theme: "system";
+    in-out property <bool> auto: true;
+    in-out property <bool> typo: true;
+    in-out property <int> level: 1;
+    in-out property <bool> yo: true;
+    in-out property <bool> period: true;
+    in-out property <bool> capital: true;
+    in-out property <bool> sounds: true;
+    in-out property <int> volume: 50;
+    in-out property <bool> single;
+    in-out property <bool> double: true;
+    in-out property <bool> both: true;
+    in-out property <bool> autostart;
+    in property <[string]> apps;
+    in property <[string]> words;
+    in property <[string]> running;
+    in property <string> layout: "EN";
+    in property <string> banner;
+    in property <string> version;
+    callback changed();
+    callback add-app(string);
+    callback remove-app(int);
+    callback add-word(string);
+    callback remove-word(int);
+    callback play(string);
+    callback open-sounds();
+    callback refresh-running();
+    callback quit();
+}
+
+component Label inherits Text {
+    color: Theme.text;
+    font-size: 14px;
+    vertical-alignment: center;
+    overflow: elide;
+}
+
+component Icon inherits Path {
+    width: 18px;
+    height: 18px;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    fill: transparent;
+    stroke: Theme.text2;
+    stroke-width: 1.8px;
+}
+
+component IconButton inherits Rectangle {
+    in property <string> icon;
+    in property <length> size: 36px;
+    callback clicked();
+    width: size;
+    height: size;
+    border-radius: size / 2;
+    background: ta.has-hover ? Theme.hover : transparent;
+    Icon {
+        commands: root.icon;
+        stroke: ta.has-hover ? Theme.text : Theme.text2;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component Toggle inherits Rectangle {
+    in-out property <bool> checked;
+    callback toggled();
+    y: 14px; // centred in a 48px row
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: checked ? Theme.switch-on : Theme.switch-off;
+    animate background { duration: 150ms; }
+    Rectangle {
+        x: root.checked ? 19px : 3px;
+        y: 3px;
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: root.checked ? Theme.knob-on : Theme.knob-off;
+        animate x { duration: 150ms; easing: ease-out; }
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled();
+        }
+    }
+}
+
+component Segmented inherits Rectangle {
+    in property <[string]> labels;
+    in-out property <int> current;
+    in property <bool> active: true;
+    callback activated(int);
+    height: 34px;
+    border-radius: 17px;
+    background: Theme.surface2;
+    border-width: 1px;
+    border-color: Theme.border;
+    opacity: active ? 1 : 0.4;
+    HorizontalLayout {
+        padding: 3px;
+        spacing: 2px;
+        for label[i] in root.labels: Rectangle {
+            border-radius: 14px;
+            background: i == root.current ? Theme.raised : transparent;
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                Text {
+                    text: label;
+                    color: i == root.current || t.has-hover ? Theme.text : Theme.text2;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+            t := TouchArea {
+                enabled: root.active;
+                mouse-cursor: pointer;
+                clicked => {
+                    root.current = i;
+                    root.activated(i);
+                }
+            }
+        }
+    }
+}
+
+component Row inherits Rectangle {
+    in property <string> label;
+    in property <bool> highlight: true;
+    // Leading column for a round "play the sound" button; rows without a sound keep the gap.
+    in property <bool> lead;
+    in property <bool> has-sound;
+    callback play();
+    height: 48px;
+    border-radius: 14px;
+    background: highlight && hover.has-hover ? Theme.hover : transparent;
+    // The controls sit inside the hover area, so the row stays lit while over a switch.
+    hover := TouchArea {
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 12px;
+            HorizontalLayout {
+                horizontal-stretch: root.label != "" ? 1 : 0;
+                // Without sounds there is nothing to preview: the column slides away.
+                if root.lead: Rectangle {
+                    width: S.sounds ? 40px : 0px; // button and the gap after it
+                    clip: true;
+                    animate width { duration: 220ms; easing: ease-in-out; }
+                    if root.has-sound: Rectangle {
+                        x: 0;
+                        y: 10px;
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 14px;
+                        background: play-ta.has-hover ? Theme.raised : Theme.surface2;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        opacity: S.sounds ? 1 : 0;
+                        animate opacity { duration: 180ms; }
+                        Icon {
+                            width: 14px;
+                            height: 14px;
+                            commands: "M9 18V5l12-2v13 M9 18a3 3 0 1 1-6 0 3 3 0 1 1 6 0 M21 16a3 3 0 1 1-6 0 3 3 0 1 1 6 0";
+                            stroke: play-ta.has-hover ? Theme.text : Theme.text2;
+                            stroke-width: 2px;
+                        }
+                        play-ta := TouchArea {
+                            enabled: S.sounds;
+                            mouse-cursor: pointer;
+                            clicked => { root.play(); }
+                        }
+                    }
+                }
+                if root.label != "": Label {
+                    text: root.label;
+                    font-size: 14.5px;
+                    horizontal-stretch: 1;
+                }
+            }
+            @children
+        }
+    }
+}
+
+component Kbd inherits Rectangle {
+    in property <string> text: "Shift";
+    height: 20px;
+    width: t.preferred-width + 12px;
+    border-radius: 6px;
+    background: Theme.surface2;
+    border-width: 1px;
+    border-color: Theme.border;
+    t := Text {
+        text: root.text;
+        color: Theme.text2;
+        font-size: 11.5px;
+        font-weight: 600;
+    }
+}
+
+component Chip inherits Rectangle {
+    in property <string> text;
+    in property <bool> removable: true;
+    callback clicked();
+    height: 28px;
+    width: row.preferred-width;
+    border-radius: 14px;
+    background: removable ? Theme.raised : (ta.has-hover ? Theme.hover : transparent);
+    border-width: removable ? 0 : 1px;
+    border-color: Theme.border;
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+    row := HorizontalLayout {
+        padding-left: 11px;
+        padding-right: root.removable ? 5px : 11px;
+        spacing: 2px;
+        Text {
+            text: root.removable ? root.text : "+ " + root.text;
+            color: root.removable ? Theme.text : Theme.text3;
+            font-size: 13px;
+            vertical-alignment: center;
+        }
+        if root.removable: Icon {
+            y: (parent.height - 14px) / 2;
+            width: 14px;
+            height: 14px;
+            commands: "M18 6 6 18 M6 6l12 12";
+            stroke: ta.has-hover ? Theme.text : Theme.text2;
+        }
+    }
+}
+
+component Field inherits Rectangle {
+    in property <string> placeholder;
+    in property <string> button;
+    callback submitted(string);
+    height: 46px;
+    HorizontalLayout {
+        padding: 6px;
+        spacing: 6px;
+        Rectangle {
+            border-radius: 17px;
+            background: Theme.bg;
+            border-width: 1px;
+            border-color: input.has-focus ? Theme.text3 : Theme.border;
+            horizontal-stretch: 1;
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                input := TextInput {
+                    color: Theme.text;
+                    font-size: 13.5px;
+                    vertical-alignment: center;
+                    single-line: true;
+                    accepted => { root.send(); }
+                }
+            }
+            if input.text == "": Text {
+                x: 14px;
+                text: root.placeholder;
+                color: Theme.text3;
+                font-size: 13.5px;
+                vertical-alignment: center;
+            }
+        }
+        Rectangle {
+            width: bt.preferred-width + 28px;
+            border-radius: 17px;
+            background: Theme.text;
+            bt := Text {
+                text: root.button;
+                color: Theme.bg;
+                font-size: 13.5px;
+                font-weight: 600;
+            }
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.send(); }
+            }
+        }
+    }
+    function send() {
+        if input.text != "" {
+            root.submitted(input.text);
+            input.text = "";
+        }
+    }
+}
+
+component Slider inherits Rectangle {
+    in-out property <int> value;
+    callback released();
+    width: 180px;
+    height: 20px;
+    Rectangle {
+        y: (parent.height - 4px) / 2;
+        height: 4px;
+        border-radius: 2px;
+        background: Theme.switch-off;
+    }
+    Rectangle {
+        x: 0;
+        y: (parent.height - 4px) / 2;
+        width: root.width * root.value / 100;
+        height: 4px;
+        border-radius: 2px;
+        background: Theme.text;
+    }
+    Rectangle {
+        x: (root.width - 16px) * root.value / 100;
+        y: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: Theme.text;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.up {
+                root.released();
+            }
+        }
+        moved => { root.set(self.mouse-x); }
+        clicked => { root.set(self.mouse-x); }
+    }
+    function set(x: length) {
+        root.value = round(max(0, min(100, x / root.width * 100)) / 5) * 5;
+    }
+}
+
+// A few fixed steps in a capsule the size of a Toggle, end captions inside.
+component StepSlider inherits Rectangle {
+    in property <int> steps: 3;
+    in-out property <int> value;
+    in property <bool> active: true;
+    in property <string> low: "Min";
+    in property <string> high: "Max";
+    callback changed(int);
+    y: 14px; // centred in a 48px row, level with the Toggle
+    width: 170px;
+    height: 20px;
+    border-radius: 10px;
+    background: Theme.switch-off;
+    opacity: active ? 1 : 0.4;
+    property <length> knob: 14px;
+    property <length> edge: 36px; // room for a caption on each side
+    property <length> step-w: (root.width - 2 * root.edge - root.knob) / (root.steps - 1);
+    Text {
+        x: 9px;
+        text: root.low;
+        color: Theme.text2;
+        font-size: 10.5px;
+        font-weight: 600;
+    }
+    Text {
+        x: root.width - self.width - 9px;
+        text: root.high;
+        color: Theme.text2;
+        font-size: 10.5px;
+        font-weight: 600;
+    }
+    for i in root.steps: Rectangle {
+        x: root.edge + root.knob / 2 + i * root.step-w - 2px;
+        y: 8px;
+        width: 4px;
+        height: 4px;
+        border-radius: 2px;
+        background: Theme.text3;
+    }
+    Rectangle {
+        x: root.edge + root.value * root.step-w;
+        y: 3px;
+        width: root.knob;
+        height: root.knob;
+        border-radius: root.knob / 2;
+        background: Theme.switch-on;
+        animate x { duration: 140ms; easing: ease-out; }
+    }
+    TouchArea {
+        enabled: root.active;
+        mouse-cursor: pointer;
+        moved => { root.pick(self.mouse-x, false); }
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down {
+                root.pick(self.mouse-x, false);
+            }
+            if e.kind == PointerEventKind.up {
+                root.pick(self.mouse-x, true);
+            }
+        }
+    }
+    function pick(x: length, done: bool) {
+        root.value = max(0, min(root.steps - 1, round((x - root.edge - root.knob / 2) / root.step-w)));
+        if done {
+            root.changed(root.value);
+        }
+    }
+}
+
+component Link inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    callback clicked();
+    height: 28px;
+    width: row.preferred-width;
+    border-radius: 14px;
+    background: ta.has-hover ? Theme.hover : transparent;
+    row := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 5px;
+        if root.icon != "": Icon {
+            y: (parent.height - 13px) / 2;
+            width: 13px;
+            height: 13px;
+            commands: root.icon;
+            stroke: ta.has-hover ? Theme.text : Theme.text2;
+        }
+        Text {
+            text: root.text;
+            color: ta.has-hover ? Theme.text : Theme.text2;
+            font-size: 12.5px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component Card inherits Rectangle {
+    border-radius: 16px;
+    background: Theme.surface2;
+    border-width: 1px;
+    border-color: Theme.border;
+    VerticalLayout {
+        padding-top: 2px;
+        padding-bottom: 2px;
+        @children
+    }
+}
+
+component Section inherits Text {
+    color: Theme.text3;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+component KeyRow inherits Row {
+    in property <int> mode; // 0: Shift ×2, 1: Shift+Shift, 2: Shift
+    in property <string> caption;
+    in-out property <bool> checked;
+    callback toggled();
+    label: "";
+    HorizontalLayout {
+        spacing: 4px;
+        alignment: start;
+        horizontal-stretch: 100;
+        Kbd { y: 14px; }
+        if root.mode == 0: Label { horizontal-stretch: 0; text: "×2"; color: Theme.text2; }
+        if root.mode == 1: Label { horizontal-stretch: 0; text: "+"; color: Theme.text2; }
+        if root.mode == 1: Kbd { y: 14px; }
+        Label { horizontal-stretch: 1; text: " " + root.caption; }
+    }
+    Toggle {
+        checked <=> root.checked;
+        toggled => { root.toggled(); }
+    }
+}
+
+component MainView inherits VerticalLayout {
+    callback open-settings();
+    // The footer row is 36px tall around 18px icons and text: less padding keeps the
+    // visible bottom margin equal to the sides.
+    padding-bottom: 11px;
+    // The layout sound alternates: English, then Russian.
+    property <bool> next-ru;
+    padding: 20px;
+    spacing: 0;
+    if S.banner != "": Rectangle {
+        height: 40px;
+        border-radius: 12px;
+        background: Theme.warn-bg;
+        Text {
+            x: 14px;
+            text: S.banner;
+            color: Theme.warn;
+            font-size: 13px;
+        }
+    }
+    Rectangle {
+        height: 56px;
+        border-radius: 28px;
+        background: Theme.surface;
+        drop-shadow-blur: 18px;
+        drop-shadow-offset-y: 4px;
+        drop-shadow-color: Theme.dark ? #00000080 : #00000018;
+        border-width: 1px;
+        border-color: Theme.border;
+        HorizontalLayout {
+            padding-left: 20px;
+            padding-right: 8px;
+            spacing: 4px;
+            Rectangle {
+                horizontal-stretch: 1;
+                try := TextInput {
+                    color: Theme.text;
+                    font-size: 15px;
+                    vertical-alignment: center;
+                    single-line: true;
+                    init => { self.focus(); }
+                }
+                if try.text == "": Text {
+                    x: 0;
+                    text: S.en ? "Try it: ghbdtn and a space" : "Попробуйте: ghbdtn и пробел";
+                    color: Theme.text3;
+                    font-size: 15px;
+                    vertical-alignment: center;
+                }
+            }
+            IconButton {
+                y: 10px;
+                icon: "m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21 M22 21H7 M5 11l9 9";
+                clicked => {
+                    try.text = "";
+                    try.focus();
+                }
+            }
+            Rectangle {
+                y: 8px;
+                width: 40px;
+                height: 40px;
+                border-radius: 20px;
+                background: Theme.text;
+                Text {
+                    text: S.layout;
+                    color: Theme.bg;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+            }
+        }
+    }
+    Rectangle { height: 12px; }
+    Row {
+        lead: true;
+        has-sound: true;
+        play => {
+            S.play(root.next-ru ? "ru" : "en");
+            root.next-ru = !root.next-ru;
+        }
+        label: S.en ? "Auto-switch keyboard layout" : "Автопереключение раскладки";
+        Toggle {
+            checked <=> S.auto;
+            toggled => { S.changed(); }
+        }
+    }
+    Row {
+        lead: true;
+        has-sound: true;
+        play => { S.play("typo"); }
+        label: S.en ? "Typos" : "Опечатки";
+        StepSlider {
+            value <=> S.level;
+            active: S.typo;
+            changed => { S.changed(); }
+        }
+        Toggle {
+            checked <=> S.typo;
+            toggled => { S.changed(); }
+        }
+    }
+    Row {
+        lead: true;
+        label: S.en ? "Yo restoration" : "Ёфикатор";
+        Toggle {
+            checked <=> S.yo;
+            toggled => { S.changed(); }
+        }
+    }
+    Row {
+        lead: true;
+        has-sound: true;
+        play => { S.play("period"); }
+        label: S.en ? "Period on double space" : "Точка двойным пробелом";
+        Toggle {
+            checked <=> S.period;
+            toggled => { S.changed(); }
+        }
+    }
+    Row {
+        lead: true;
+        label: S.en ? "Capital letter at sentence start" : "Заглавная в начале предложения";
+        Toggle {
+            checked <=> S.capital;
+            toggled => { S.changed(); }
+        }
+    }
+    Row {
+        lead: true;
+        label: S.en ? "Sounds" : "Звуки";
+        Toggle {
+            checked <=> S.sounds;
+            toggled => { S.changed(); }
+        }
+    }
+    Rectangle { vertical-stretch: 1; }
+    HorizontalLayout {
+        height: 36px;
+        spacing: 12px;
+        padding-left: -8px;
+        IconButton {
+            icon: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M15 12a3 3 0 1 1-6 0 3 3 0 1 1 6 0";
+            clicked => { root.open-settings(); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        HorizontalLayout {
+            spacing: 4px;
+            alignment: end;
+            Kbd { y: 8px; }
+            Label { horizontal-stretch: 0; text: "×2 " + (S.en ? "fix a word" : "исправить слово"); color: Theme.text3; font-size: 12.5px; }
+            Rectangle { width: 16px; }
+            Kbd { y: 8px; }
+            Label { horizontal-stretch: 0; text: "+"; color: Theme.text3; font-size: 12.5px; }
+            Kbd { y: 8px; }
+            Label { horizontal-stretch: 0; text: " " + (S.en ? "auto mode" : "авторежим"); color: Theme.text3; font-size: 12.5px; }
+        }
+    }
+}
+
+component SettingsView inherits VerticalLayout {
+    callback back();
+    padding: 20px;
+    padding-bottom: 0;
+    spacing: 10px;
+    HorizontalLayout {
+        height: 36px;
+        padding-left: -6px;
+        Rectangle {
+            width: head.preferred-width;
+            border-radius: 18px;
+            background: back-ta.has-hover ? Theme.hover : transparent;
+            head := HorizontalLayout {
+                padding-left: 6px;
+                padding-right: 12px;
+                spacing: 6px;
+                Icon {
+                    y: 9px;
+                    commands: "m15 18-6-6 6-6";
+                    stroke: Theme.text;
+                }
+                Label {
+                    text: S.en ? "Settings" : "Настройки";
+                    font-size: 16px;
+                    font-weight: 600;
+                }
+            }
+            back-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.back(); }
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+    Rectangle {
+        vertical-stretch: 1;
+        flick := Flickable {
+            content-height: content.preferred-height;
+            content := VerticalLayout {
+                spacing: 6px;
+                padding-bottom: 20px;
+                Section { text: S.en ? "General" : "Общие"; }
+                Card {
+                    Row {
+                        highlight: false;
+                        label: S.en ? "Language" : "Язык";
+                        Segmented {
+                            y: 7px;
+                            labels: ["Русский", "English"];
+                            current: S.en ? 1 : 0;
+                            activated(i) => {
+                                S.en = i == 1;
+                                S.changed();
+                            }
+                        }
+                    }
+                    Row {
+                        highlight: false;
+                        label: S.en ? "Theme" : "Тема";
+                        Segmented {
+                            y: 7px;
+                            labels: S.en ? ["System", "Dark", "Light"] : ["Система", "Тёмная", "Светлая"];
+                            current: S.theme == "dark" ? 1 : S.theme == "light" ? 2 : 0;
+                            activated(i) => {
+                                S.theme = i == 1 ? "dark" : i == 2 ? "light" : "system";
+                                S.changed();
+                            }
+                        }
+                    }
+                    Row {
+                        highlight: false;
+                        label: S.en ? "Start with Windows" : "Запускать с Windows";
+                        Toggle {
+                            checked <=> S.autostart;
+                            toggled => { S.changed(); }
+                        }
+                    }
+                }
+                Rectangle { height: 8px; }
+                Section { text: S.en ? "Shortcuts" : "Клавиши"; }
+                Card {
+                    KeyRow {
+                        highlight: false;
+                        mode: 0;
+                        caption: S.en ? "Fix a word or the selection" : "Исправить слово или выделение";
+                        checked <=> S.double;
+                        toggled => { S.changed(); }
+                    }
+                    KeyRow {
+                        highlight: false;
+                        mode: 1;
+                        caption: S.en ? "Auto mode on/off" : "Авторежим вкл/выкл";
+                        checked <=> S.both;
+                        toggled => { S.changed(); }
+                    }
+                    KeyRow {
+                        highlight: false;
+                        mode: 2;
+                        caption: S.en ? "Switch the layout" : "Сменить раскладку";
+                        checked <=> S.single;
+                        toggled => { S.changed(); }
+                    }
+                }
+                Rectangle { height: 8px; }
+                Section { text: S.en ? "Sounds" : "Звуки"; }
+                Card {
+                    Row {
+                        highlight: false;
+                        label: S.en ? "Volume" : "Громкость";
+                        Slider {
+                            y: 14px;
+                            value <=> S.volume;
+                            released => { S.changed(); }
+                        }
+                    }
+                    HorizontalLayout {
+                        height: 44px;
+                        padding-left: 6px;
+                        padding-right: 6px;
+                        spacing: 2px;
+                        for k in ["en", "ru", "typo", "on", "off", "period"]: Link {
+                            y: 8px;
+                            icon: "M6 3l14 9-14 9z";
+                            text: k == "en" ? "EN" : k == "ru" ? "RU" : k == "typo" ? "TYPO" : k == "on" ? "ON" : k == "off" ? "OFF" : "DOT";
+                            clicked => { S.play(k); }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        Link {
+                            y: 8px;
+                            icon: "m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2";
+                            text: S.en ? "Sounds folder" : "Папка звуков";
+                            clicked => { S.open-sounds(); }
+                        }
+                    }
+                }
+                Rectangle { height: 8px; }
+                Section { text: S.en ? "Exceptions" : "Исключения"; }
+                Card {
+                    Label {
+                        height: 30px;
+                        x: 14px;
+                        text: S.en ? "Apps" : "Программы";
+                        color: Theme.text2;
+                        font-size: 13px;
+                    }
+                    for app[i] in S.apps: Row {
+                        height: 34px;
+                        label: app;
+                        IconButton {
+                            y: 3px;
+                            size: 28px;
+                            icon: "M18 6 6 18 M6 6l12 12";
+                            clicked => { S.remove-app(i); }
+                        }
+                    }
+                    if S.running.length > 0: HorizontalLayout {
+                        height: 36px;
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 6px;
+                        alignment: start;
+                        for app in S.running: Chip {
+                            y: 4px;
+                            removable: false;
+                            text: app;
+                            clicked => { S.add-app(app); }
+                        }
+                    }
+                    Field {
+                        placeholder: "program.exe";
+                        button: S.en ? "Add" : "Добавить";
+                        submitted(v) => { S.add-app(v); }
+                    }
+                    Label {
+                        height: 30px;
+                        x: 14px;
+                        text: S.en ? "Words" : "Слова";
+                        color: Theme.text2;
+                        font-size: 13px;
+                    }
+                    for word[i] in S.words: Row {
+                        height: 34px;
+                        label: word;
+                        IconButton {
+                            y: 3px;
+                            size: 28px;
+                            icon: "M18 6 6 18 M6 6l12 12";
+                            clicked => { S.remove-word(i); }
+                        }
+                    }
+                    Field {
+                        placeholder: S.en ? "word" : "слово";
+                        button: S.en ? "Add" : "Добавить";
+                        submitted(v) => { S.add-word(v); }
+                    }
+                }
+                HorizontalLayout {
+                    height: 40px;
+                    spacing: 8px;
+                    Label {
+                        horizontal-stretch: 1;
+                        text: "PekSwitcher " + S.version + " · " + (S.en ? "Dictionaries: FrequencyWords (CC BY-SA 4.0), eyo-kernel (MIT). Icons: Lucide." : "Словари: FrequencyWords (CC BY-SA 4.0), eyo-kernel (MIT). Иконки: Lucide.");
+                        color: Theme.text3;
+                        font-size: 11px;
+                    }
+                    Link {
+                        y: 6px;
+                        text: S.en ? "Quit" : "Выйти";
+                        clicked => { S.quit(); }
+                    }
+                }
+            }
+        }
+        // Soft fades where more content is hidden.
+        Rectangle {
+            y: 0;
+            height: 28px;
+            opacity: min(1, -flick.content-y / 28px);
+            background: @linear-gradient(180deg, Theme.bg 0%, Theme.bg.transparentize(1) 100%);
+        }
+        Rectangle {
+            y: parent.height - 28px;
+            height: 28px;
+            opacity: min(1, max(0, (flick.content-height + flick.content-y - flick.height) / 28px));
+            background: @linear-gradient(180deg, Theme.bg.transparentize(1) 0%, Theme.bg 100%);
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    in-out property <bool> settings-open;
+    // Flipped by the app when the window is shown again: the software renderer only redraws
+    // what changed, but Windows drops a hidden window's pixels, so the whole window must be dirty.
+    in-out property <bool> repaint;
+    title: "PekSwitcher";
+    width: 600px;
+    height: S.banner != "" ? 471px : 431px; // the warning banner adds a row
+    background: Theme.bg;
+    default-font-family: "Segoe UI";
+    if !root.settings-open: MainView {
+        open-settings => {
+            S.refresh-running();
+            root.settings-open = true;
+        }
+    }
+    if root.settings-open: FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Escape {
+                root.settings-open = false;
+                return accept;
+            }
+            reject
+        }
+        init => { self.focus(); }
+        SettingsView {
+            back => { root.settings-open = false; }
+        }
+    }
+    Rectangle {
+        background: root.repaint ? #00000001 : #00000000;
+    }
+}
