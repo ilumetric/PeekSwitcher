@@ -1,6 +1,7 @@
 # Build output
 /target
 /app/gen
+/dist
 
 # Settings of dev builds (the app keeps them next to the exe)
 /data

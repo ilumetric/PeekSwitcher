@@ -4,8 +4,10 @@ description = "PekSwitcher — keyboard layout switcher"
 version.workspace = true
 edition.workspace = true
 
-[dev-dependencies]
-windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_UI_Input", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+# The executable keeps the product's spelling: PekSwitcher.exe
+[[bin]]
+name = "PekSwitcher"
+path = "src/main.rs"
 
 [build-dependencies]
 slint-build = "1"

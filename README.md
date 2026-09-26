@@ -33,8 +33,8 @@
 
 ```
 cargo run -p pekswitcher                       # отладочная сборка
-cargo build --release -p pekswitcher           # рабочая: target/release/pekswitcher.exe
-cargo build --profile dist -p pekswitcher      # итоговая, с полной оптимизацией: target/dist/
+cargo build --release -p pekswitcher           # рабочая: target/release/PekSwitcher.exe
+powershell -File tools/package.ps1             # релиз: папка dist/PekSwitcher (exe + resources)
 ```
 
 Программе нужна папка `resources/` (словари и звуки). При запуске из `target/...` она
