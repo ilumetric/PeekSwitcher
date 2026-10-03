@@ -1,0 +1,44 @@
+# Pushing a tag vX.Y.Z builds the portable zip and publishes a GitHub Release.
+# Tags with a suffix (v0.2.0-beta.1) become pre-releases.
+# The tag is made by tools/release.ps1, which also bumps the version in Cargo.toml.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check tag matches Cargo.toml
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          if ("v$version" -ne "${{ github.ref_name }}") {
+            Write-Error "Tag ${{ github.ref_name }} does not match Cargo.toml version $version"
+          }
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+      - name: Package
+        shell: pwsh
+        run: ./tools/package.ps1 -Zip
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $flags = @("--title", "PekSwitcher $($tag.TrimStart('v'))", "--generate-notes", "--verify-tag")
+          if ($tag.Contains("-")) { $flags += "--prerelease" }
+          gh release create $tag (Get-ChildItem dist/*.zip, dist/*.sha256).FullName @flags

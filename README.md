@@ -5,6 +5,9 @@
 Переключатель раскладки для Windows 11 (с заделом под macOS): сам исправляет слова,
 набранные не в той раскладке, чинит опечатки и расставляет «ё». Живёт в трее.
 
+**[Скачать последнюю версию](https://github.com/ilumetric/PekSwitcher/releases/latest)** — архив
+`PekSwitcher-<версия>-windows-x64.zip`: распаковать в любую папку и запустить `PekSwitcher.exe`.
+
 ## Возможности
 
 * **Автопереключение раскладки** — `ghbdtn` → «привет», `руддщ` → «hello»; однобуквенные
@@ -35,11 +38,23 @@
 cargo run -p pekswitcher                       # отладочная сборка
 cargo build --release -p pekswitcher           # рабочая: target/release/PekSwitcher.exe
 powershell -File tools/package.ps1             # релиз: папка dist/PekSwitcher (exe + resources)
+powershell -File tools/package.ps1 -Zip        # то же + dist/PekSwitcher-<версия>-windows-x64.zip
 ```
 
 Программе нужна папка `resources/` (словари и звуки). При запуске из `target/...` она
 находится сама; для переноса положите `resources/` рядом с exe. Настройки хранятся в
 `data/` рядом с exe, а если папка только для чтения — в `%APPDATA%\PekSwitcher`.
+
+## Выпуск версии
+
+```
+powershell -File tools/release.ps1 0.2.0
+```
+
+Скрипт поднимает версию в `Cargo.toml`, прогоняет тесты, коммитит, ставит тег `v0.2.0` и пушит.
+Тег запускает [release.yml](.github/workflows/release.yml): GitHub Actions собирает zip и
+публикует релиз с автоматическим списком изменений. Теги с суффиксом (`v0.2.0-beta.1`)
+выходят как пре-релизы. Каждый пуш и PR проверяется [ci.yml](.github/workflows/ci.yml).
 
 ## Устройство
 
@@ -74,3 +89,8 @@ cargo run -p pek-platform --example e2e                  # набор в реа�
 * Словарь ё — [eyo-kernel](https://github.com/hcodes/eyo-kernel), Денис Селезнёв, MIT
 * Иконки интерфейса — [Lucide](https://lucide.dev), ISC
 * Интерфейс — [Slint](https://slint.dev) (Royalty-free license)
+
+## Лицензия
+
+Код — [MIT](LICENSE). Словари в `resources/dict` производны от FrequencyWords и
+распространяются на условиях CC BY-SA 4.0.

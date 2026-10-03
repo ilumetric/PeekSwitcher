@@ -3,6 +3,8 @@ name = "pekswitcher"
 description = "PekSwitcher — keyboard layout switcher"
 version.workspace = true
 edition.workspace = true
+authors.workspace = true
+license.workspace = true
 
 # The executable keeps the product's spelling: PekSwitcher.exe
 [[bin]]
