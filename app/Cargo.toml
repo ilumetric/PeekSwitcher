@@ -19,7 +19,7 @@ embed-resource = "3"
 # The software renderer keeps memory low; this small window needs no GPU.
 slint = { version = "1", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "accessibility", "raw-window-handle-06"] }
 raw-window-handle = "0.6"
-tray-icon = "0.24"
+tray-icon = "0.26"
 png = "0.18"
 serde.workspace = true
 serde_json.workspace = true
