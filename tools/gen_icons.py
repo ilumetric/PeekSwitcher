@@ -1,7 +1,8 @@
 """Renders the app icon (app/icons) and tray icons (app/icons/tray) with Pillow.
 
 App icon: black squircle with "Й"; small sizes (title bar) show "Q", the same key in English.
-Tray icons: rounded badge with the current layout ("EN"/"RU"); grey when auto switching is off.
+Tray icons: rounded badge with the current layout ("EN"/"RU"); grey when auto switching is off,
+an empty outline when the whole app is turned off.
 Run:  python tools/gen_icons.py
 """
 import os
@@ -53,13 +54,20 @@ def app_icon(letter, size=1024, inset=0.14, height=0.40):
     return img
 
 
-def tray_icon(text, active, size=128):
+def tray_icon(text, state, size=128):
+    """state: "on", "off" (auto switching off) or "disabled" (the app is turned off)."""
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    fill = (236, 236, 236, 255) if active else (120, 120, 120, 255)
-    d.rounded_rectangle((4, 14, size - 5, size - 15), radius=int(size * 0.2), fill=fill)
+    box = (4, 14, size - 5, size - 15)
     font = ImageFont.truetype(FONT_BOLD, int(size * 0.5))
-    centered_text(d, (4, 14, size - 5, size - 15), text, font, (23, 23, 23, 255))
+    if state == "disabled":
+        grey = (150, 150, 150, 255)
+        d.rounded_rectangle(box, radius=int(size * 0.2), outline=grey, width=int(size * 0.07))
+        centered_text(d, box, text, font, grey)
+        return img
+    fill = (236, 236, 236, 255) if state == "on" else (120, 120, 120, 255)
+    d.rounded_rectangle(box, radius=int(size * 0.2), fill=fill)
+    centered_text(d, box, text, font, (23, 23, 23, 255))
     return img
 
 
@@ -81,9 +89,9 @@ def main():
         append_images=frames[:-1],
     )
     for lang in ("en", "ru"):
-        for active in (True, False):
-            icon = tray_icon(lang.upper(), active).resize((32, 32), Image.LANCZOS)
-            icon.save(os.path.join(TRAY, f"{lang}{'' if active else '_off'}.png"))
+        for state, suffix in (("on", ""), ("off", "_off"), ("disabled", "_disabled")):
+            icon = tray_icon(lang.upper(), state).resize((32, 32), Image.LANCZOS)
+            icon.save(os.path.join(TRAY, f"{lang}{suffix}.png"))
     print("icons written to", ICONS)
 
 

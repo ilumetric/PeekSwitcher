@@ -6,6 +6,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    /// Master switch: when off, the app passes every key through untouched.
+    pub enabled: bool,
+    /// Stay silent in games: fullscreen windows and apps that captured the mouse
+    /// (an Unreal Engine viewport in Play mode, a shooter...).
+    pub pause_in_games: bool,
     /// Interface language: "ru" or "en".
     pub ui_lang: String,
     /// "system", "dark" or "light".
@@ -41,6 +46,8 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            enabled: true,
+            pause_in_games: true,
             ui_lang: "ru".into(),
             theme: "system".into(),
             auto_switch: true,

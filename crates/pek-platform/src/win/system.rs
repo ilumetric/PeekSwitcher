@@ -2,7 +2,8 @@
 
 use std::path::Path;
 
-use windows_sys::Win32::Foundation::{CloseHandle, HWND, LPARAM};
+use windows_sys::Win32::Foundation::{CloseHandle, HWND, LPARAM, RECT};
+use windows_sys::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONULL};
 use windows_sys::Win32::System::Registry::*;
 use windows_sys::Win32::System::Threading::{
     GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
@@ -63,6 +64,65 @@ pub fn process_name(hwnd: HWND) -> Option<String> {
 pub fn is_excluded(hwnd: HWND, shared: &Shared) -> bool {
     let Some(name) = process_name(hwnd) else { return false };
     shared.settings.lock().unwrap().exception_apps.iter().any(|a| a.eq_ignore_ascii_case(&name))
+}
+
+/// A game has the keyboard: the foreground window fills its whole monitor (exclusive or
+/// borderless fullscreen), or it has locked the mouse inside itself. Games lock the mouse while
+/// it steers the camera, and so does an Unreal Engine viewport in Play mode, while the rest of
+/// the editor (renaming assets, the Details panel) leaves the cursor free.
+pub fn game_focused(hwnd: HWND) -> bool {
+    if hwnd.is_null() {
+        return false;
+    }
+    unsafe {
+        let mut win: RECT = std::mem::zeroed();
+        if GetWindowRect(hwnd, &mut win) == 0 {
+            return false;
+        }
+        mouse_locked(&win) || fullscreen(hwnd, &win)
+    }
+}
+
+fn contains(outer: &RECT, inner: &RECT) -> bool {
+    inner.left >= outer.left && inner.top >= outer.top && inner.right <= outer.right && inner.bottom <= outer.bottom
+}
+
+/// The cursor is confined (`ClipCursor`) to a part of the screen inside the window.
+unsafe fn mouse_locked(win: &RECT) -> bool {
+    let mut clip: RECT = std::mem::zeroed();
+    if GetClipCursor(&mut clip) == 0 {
+        return false;
+    }
+    let x = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    let y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    let screen = RECT {
+        left: x,
+        top: y,
+        right: x + GetSystemMetrics(SM_CXVIRTUALSCREEN),
+        bottom: y + GetSystemMetrics(SM_CYVIRTUALSCREEN),
+    };
+    !contains(&clip, &screen) && contains(win, &clip)
+}
+
+/// The window covers its entire monitor, taskbar included, without being a maximized
+/// ordinary window (those cover the monitor too when the taskbar auto-hides) or the desktop.
+unsafe fn fullscreen(hwnd: HWND, win: &RECT) -> bool {
+    if GetWindowLongW(hwnd, GWL_STYLE) as u32 & WS_MAXIMIZE != 0 {
+        return false;
+    }
+    let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+    if monitor.is_null() {
+        return false;
+    }
+    let mut info: MONITORINFO = std::mem::zeroed();
+    info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+    if GetMonitorInfoW(monitor, &mut info) == 0 || !contains(win, &info.rcMonitor) {
+        return false;
+    }
+    let mut class = [0u16; 32];
+    let len = GetClassNameW(hwnd, class.as_mut_ptr(), class.len() as i32).max(0) as usize;
+    let class = String::from_utf16_lossy(&class[..len]);
+    class != "Progman" && class != "WorkerW"
 }
 
 pub fn foreground_is_terminal() -> bool {

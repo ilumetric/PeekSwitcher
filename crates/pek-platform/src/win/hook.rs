@@ -236,6 +236,10 @@ fn on_keyboard(msg: u32, kb: &KBDLLHOOKSTRUCT) -> bool {
                 ctx.fg = hwnd as usize;
                 ctx.fg_excluded = system::is_excluded(hwnd, &ctx.shared);
             }
+            let shared = &ctx.shared;
+            let silent = ctx.fg_excluded
+                || shared.paused.load(Ordering::Relaxed)
+                || (shared.games.load(Ordering::Relaxed) && system::game_focused(hwnd));
             let ev = KeyEvent {
                 code,
                 down,
@@ -244,7 +248,7 @@ fn on_keyboard(msg: u32, kb: &KBDLLHOOKSTRUCT) -> bool {
                 layout: layouts::lang_of(layouts::layout_of_thread(tid)),
                 caps: ctx.shared.caps.load(Ordering::Relaxed),
                 window: hwnd as u64,
-                excluded: ctx.fg_excluded,
+                excluded: silent,
                 raw: pack(kb, down),
             };
             let out = ctx.engine.on_key(&ev);

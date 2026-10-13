@@ -35,6 +35,8 @@ struct Sim {
     selection_jobs: usize,
     /// Execute jobs right away (a fast machine) or leave them queued (the user types faster).
     eager: bool,
+    /// The focused app is excluded (or a game has focus).
+    excluded: bool,
 }
 
 impl Sim {
@@ -61,6 +63,7 @@ impl Sim {
             auto: None,
             selection_jobs: 0,
             eager: true,
+            excluded: false,
         }
     }
 
@@ -74,7 +77,7 @@ impl Sim {
             layout: Some(self.layout),
             caps: self.caps,
             window: 1,
-            excluded: false,
+            excluded: self.excluded,
             raw,
         };
         let out = self.e.on_key(&ev);
@@ -323,6 +326,34 @@ fn both_shifts_toggle_auto_switching() {
     assert!(s.sounds.contains(&Sound::Off));
     s.keys("ghbdtn ", Lang::En);
     assert_eq!(s.screen, "ghbdtn ");
+}
+
+#[test]
+fn excluded_apps_get_no_corrections_or_gestures() {
+    let mut s = Sim::with(Lang::En, Settings { single_shift: true, ..Settings::default() });
+    s.excluded = true;
+    // Sprinting in a game: WASD with Shift tapped over and over.
+    s.keys("wwww", Lang::En);
+    for _ in 0..4 {
+        s.double_shift();
+    }
+    s.press(Code::ShiftLeft, true);
+    s.press(Code::ShiftRight, true);
+    s.press(Code::ShiftRight, false);
+    s.press(Code::ShiftLeft, false);
+    s.keys("ghbdtn ", Lang::En);
+    let now = s.t + 1000;
+    let out = s.e.on_timer(now, Some(Lang::En));
+    s.handle(out.actions);
+    assert_eq!(s.screen, "wwwwghbdtn ");
+    assert_eq!(s.layout, Lang::En);
+    assert_eq!(s.selection_jobs, 0);
+    assert_eq!(s.auto, None);
+    assert!(s.sounds.is_empty());
+    // Back in a normal app everything works again.
+    s.excluded = false;
+    s.keys(" ghbdtn ", Lang::En);
+    assert_eq!(s.screen, "wwwwghbdtn  привет ");
 }
 
 #[test]

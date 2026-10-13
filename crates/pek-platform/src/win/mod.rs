@@ -45,6 +45,10 @@ pub(crate) struct Shared {
     pub sound: SoundBank,
     /// Last layout we announced (sound + event): 0 unknown, 1 en, 2 ru.
     pub announced: AtomicU8,
+    /// The switcher is turned off: every key passes through, no sounds.
+    pub paused: AtomicBool,
+    /// Stay silent while a game has focus.
+    pub games: AtomicBool,
     pub stop: AtomicBool,
 }
 
@@ -76,7 +80,9 @@ impl Shared {
     pub fn announce(&self, lang: Lang) {
         let v = encode(Some(lang));
         if self.announced.swap(v, Ordering::AcqRel) != v {
-            self.sound.play(if lang == Lang::En { Sound::En } else { Sound::Ru }, false);
+            if !self.paused.load(Ordering::Relaxed) {
+                self.sound.play(if lang == Lang::En { Sound::En } else { Sound::Ru }, false);
+            }
             let _ = self.events.send(Event::LayoutChanged(Some(lang)));
         }
     }
@@ -111,6 +117,8 @@ impl Switcher {
             cmds: Mutex::new(Vec::new()),
             events,
             announced: AtomicU8::new(encode(layouts::current())),
+            paused: AtomicBool::new(!config.settings.enabled),
+            games: AtomicBool::new(config.settings.pause_in_games),
             stop: AtomicBool::new(false),
         });
 
@@ -142,6 +150,8 @@ impl Switcher {
 
     pub fn apply_settings(&self, settings: &Settings) {
         *self.shared.settings.lock().unwrap() = settings.clone();
+        self.shared.paused.store(!settings.enabled, Ordering::Relaxed);
+        self.shared.games.store(settings.pause_in_games, Ordering::Relaxed);
         self.shared.sound.configure(settings.sounds, settings.sound_volume);
         self.shared.post_cmd(Cmd::Config(EngineConfig::from_settings(settings)));
     }

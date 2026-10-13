@@ -52,7 +52,8 @@ pub struct KeyEvent {
     pub caps: bool,
     /// Identity of the focused window; a change resets the typed context.
     pub window: u64,
-    /// The focused app is in the exception list.
+    /// The switcher must stay silent: the focused app is in the exception list, a game has
+    /// focus or the switcher is turned off. Keys are only tracked, never acted upon.
     pub excluded: bool,
     pub raw: RawKey,
 }
@@ -481,6 +482,10 @@ impl Engine {
     }
 
     fn process(&mut self, ev: &KeyEvent, out: &mut Output) {
+        if ev.excluded {
+            self.passive(ev, out);
+            return;
+        }
         if !ev.down {
             if let Some(i) = self.swallowed.iter().position(|&c| c == ev.code) {
                 self.swallowed.swap_remove(i);
@@ -539,6 +544,30 @@ impl Engine {
             Code::Backspace => self.on_backspace(),
             _ => self.reset(),
         }
+    }
+
+    /// Silent mode: keeps modifier and Shift state current (so nothing is stuck when typing
+    /// resumes), but no gesture fires and nothing is typed.
+    fn passive(&mut self, ev: &KeyEvent, out: &mut Output) {
+        if !ev.down {
+            if let Some(i) = self.swallowed.iter().position(|&c| c == ev.code) {
+                self.swallowed.swap_remove(i);
+                out.swallow = true;
+            }
+        }
+        if ev.code.is_modifier() {
+            self.mods.set(ev.code, ev.down);
+        }
+        if ev.code.is_shift() {
+            if ev.down {
+                self.gesture.shift_down(ev.code, ev.time);
+            } else {
+                let _ = self.gesture.shift_up(ev.code, ev.time);
+            }
+        }
+        self.gesture.cancel();
+        self.window = ev.window;
+        self.reset();
     }
 
     fn on_modifier(&mut self, ev: &KeyEvent, out: &mut Output) {

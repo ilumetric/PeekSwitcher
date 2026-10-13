@@ -89,6 +89,8 @@ fn show_settings(ui: &MainWindow, s: &Settings) {
     g.set_double(s.double_shift);
     g.set_both(s.shift_shift);
     g.set_autostart(s.autostart);
+    g.set_enabled(s.enabled);
+    g.set_games(s.pause_in_games);
     g.set_apps(strings(&s.exception_apps));
     g.set_words(strings(&s.exception_words));
     let dark = match s.theme.as_str() {
@@ -116,6 +118,8 @@ fn read_settings(ui: &MainWindow, mut s: Settings) -> Settings {
     s.double_shift = g.get_double();
     s.shift_shift = g.get_both();
     s.autostart = g.get_autostart();
+    s.enabled = g.get_enabled();
+    s.pause_in_games = g.get_games();
     s
 }
 
@@ -124,6 +128,9 @@ fn show_status(ui: &MainWindow, core: &Core) {
     g.set_layout(layout_code(core.layout()).into());
     let en = g.get_en();
     let mut banner = core.error.lock().unwrap().clone().unwrap_or_default();
+    if banner.is_empty() && !core.settings().enabled {
+        banner = if en { "PekSwitcher is turned off." } else { "PekSwitcher отключён." }.into();
+    }
     if banner.is_empty() {
         let langs = pek_platform::available_langs();
         for (lang, ru, eng) in [(Lang::Ru, "русская", "Russian"), (Lang::En, "английская", "English")] {
@@ -207,6 +214,11 @@ pub fn show_window() {
             pek_platform::bring_to_front(TITLE);
         }
     });
+}
+
+pub fn toggle_enabled(core: &Core) {
+    core.edit(|s| s.enabled = !s.enabled);
+    refresh(core);
 }
 
 pub fn toggle_auto(core: &Core) {

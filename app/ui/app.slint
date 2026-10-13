@@ -35,6 +35,8 @@ export global S {
     in-out property <bool> double: true;
     in-out property <bool> both: true;
     in-out property <bool> autostart;
+    in-out property <bool> enabled: true;
+    in-out property <bool> games: true;
     in property <[string]> apps;
     in property <[string]> words;
     in property <[string]> running;
@@ -523,6 +525,15 @@ component MainView inherits VerticalLayout {
             color: Theme.warn;
             font-size: 13px;
         }
+        if !S.enabled: Link {
+            x: parent.width - self.width - 6px;
+            y: 6px;
+            text: S.en ? "Turn on" : "Включить";
+            clicked => {
+                S.enabled = true;
+                S.changed();
+            }
+        }
     }
     Rectangle {
         height: 56px;
@@ -802,6 +813,30 @@ component SettingsView inherits VerticalLayout {
                 Rectangle { height: 8px; }
                 Section { text: S.en ? "Exceptions" : "Исключения"; }
                 Card {
+                    Row {
+                        highlight: false;
+                        label: S.en ? "Stay silent in games" : "Не мешать в играх";
+                        Toggle {
+                            checked <=> S.games;
+                            toggled => { S.changed(); }
+                        }
+                    }
+                    HorizontalLayout {
+                        height: 44px;
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        padding-bottom: 8px;
+                        Label {
+                            vertical-alignment: top;
+                            wrap: word-wrap;
+                            overflow: clip;
+                            text: S.en
+                                ? "Fullscreen windows and apps that lock the mouse: games, Play mode in Unreal Engine. Renaming assets in the editor keeps working."
+                                : "Полноэкранные окна и программы, захватившие мышь: игры, режим Play в Unreal Engine. Переименование ассетов в редакторе работает.";
+                            color: Theme.text3;
+                            font-size: 12px;
+                        }
+                    }
                     Label {
                         height: 30px;
                         x: 14px;
