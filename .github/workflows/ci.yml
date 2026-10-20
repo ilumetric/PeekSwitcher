@@ -20,4 +20,4 @@ jobs:
       - name: Test
         run: cargo test --workspace --locked
       - name: Build release
-        run: cargo build --release -p pekswitcher --locked
+        run: cargo build --release -p peekswitcher --locked

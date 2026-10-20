@@ -30,11 +30,11 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 git add Cargo.toml Cargo.lock
 git commit -m "Release $tag"
-git tag -a $tag -m "PekSwitcher $Version"
+git tag -a $tag -m "PeekSwitcher $Version"
 
 if ($NoPush) {
     "Tagged $tag. Publish with:  git push --follow-tags"
 } else {
     git push --follow-tags origin master
-    "Pushed ${tag}: https://github.com/ilumetric/PekSwitcher/actions"
+    "Pushed ${tag}: https://github.com/ilumetric/PeekSwitcher/actions"
 }

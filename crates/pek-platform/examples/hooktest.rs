@@ -84,7 +84,7 @@ mod win {
                 lpszClassName: class.as_ptr(),
             };
             RegisterClassW(&wc);
-            let title = wide("PekSwitcher hook test");
+            let title = wide("PeekSwitcher hook test");
             let main = CreateWindowExW(
                 0, class.as_ptr(), title.as_ptr(), WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                 200, 200, 400, 120, std::ptr::null_mut(), std::ptr::null_mut(), wc.hInstance, std::ptr::null(),

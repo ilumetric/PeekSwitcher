@@ -1,4 +1,4 @@
-//! OS integration of PekSwitcher. The public API is the same on every platform; the
+//! OS integration of PeekSwitcher. The public API is the same on every platform; the
 //! Windows implementation lives in `win`, other systems get a stub until they are ported
 //! (macOS: CGEventTap for the hook, CGEventPost for input, TIS input sources for layouts).
 

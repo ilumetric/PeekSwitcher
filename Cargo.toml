@@ -19,7 +19,7 @@ opt-level = 3
 incremental = true
 strip = true
 
-# Shipping build (installer, portable folder): cargo build --profile dist -p pekswitcher
+# Shipping build (installer, portable folder): cargo build --profile dist -p peekswitcher
 [profile.dist]
 inherits = "release"
 lto = true

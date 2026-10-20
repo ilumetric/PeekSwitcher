@@ -39,6 +39,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
-          $flags = @("--title", "PekSwitcher $($tag.TrimStart('v'))", "--generate-notes", "--verify-tag")
+          $flags = @("--title", "PeekSwitcher $($tag.TrimStart('v'))", "--generate-notes", "--verify-tag")
           if ($tag.Contains("-")) { $flags += "--prerelease" }
           gh release create $tag (Get-ChildItem dist/*.zip, dist/*.sha256).FullName @flags

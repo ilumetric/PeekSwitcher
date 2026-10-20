@@ -1,12 +1,12 @@
-<p align="center"><img src="app/icons/icon.png" width="96" alt="PekSwitcher"></p>
+<p align="center"><img src="app/icons/icon.png" width="96" alt="PeekSwitcher"></p>
 
-# PekSwitcher
+# PeekSwitcher
 
 Переключатель раскладки для Windows 11 (с заделом под macOS): сам исправляет слова,
 набранные не в той раскладке, чинит опечатки и расставляет «ё». Живёт в трее.
 
-**[Скачать последнюю версию](https://github.com/ilumetric/PekSwitcher/releases/latest)** — архив
-`PekSwitcher-<версия>-windows-x64.zip`: распаковать в любую папку и запустить `PekSwitcher.exe`.
+**[Скачать последнюю версию](https://github.com/ilumetric/PeekSwitcher/releases/latest)** — архив
+`PeekSwitcher-<версия>-windows-x64.zip`: распаковать в любую папку и запустить `PeekSwitcher.exe`.
 
 ## Возможности
 
@@ -39,15 +39,15 @@
 Нужен [Rust](https://rustup.rs) (stable). Всё остальное подтягивает Cargo.
 
 ```
-cargo run -p pekswitcher                       # отладочная сборка
-cargo build --release -p pekswitcher           # рабочая: target/release/PekSwitcher.exe
-powershell -File tools/package.ps1             # релиз: папка dist/PekSwitcher (exe + resources)
-powershell -File tools/package.ps1 -Zip        # то же + dist/PekSwitcher-<версия>-windows-x64.zip
+cargo run -p peekswitcher                       # отладочная сборка
+cargo build --release -p peekswitcher           # рабочая: target/release/PeekSwitcher.exe
+powershell -File tools/package.ps1             # релиз: папка dist/PeekSwitcher (exe + resources)
+powershell -File tools/package.ps1 -Zip        # то же + dist/PeekSwitcher-<версия>-windows-x64.zip
 ```
 
 Программе нужна папка `resources/` (словари и звуки). При запуске из `target/...` она
 находится сама; для переноса положите `resources/` рядом с exe. Настройки хранятся в
-`data/` рядом с exe, а если папка только для чтения — в `%APPDATA%\PekSwitcher`.
+`data/` рядом с exe, а если папка только для чтения — в `%APPDATA%\PeekSwitcher`.
 
 ## Выпуск версии
 

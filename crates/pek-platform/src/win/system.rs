@@ -14,7 +14,9 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 use super::{layouts, Shared};
 
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-const RUN_VALUE: &str = "PekSwitcher";
+const RUN_VALUE: &str = "PeekSwitcher";
+/// Value written before the app was renamed; removed so it cannot start a stale exe.
+const LEGACY_RUN_VALUE: &str = "PekSwitcher";
 
 /// Terminals: Ctrl+C there interrupts a program, so selection copy avoids it.
 const TERMINALS: [&str; 10] = [
@@ -161,6 +163,8 @@ fn run_key(access: REG_SAM_FLAGS) -> Option<HKEY> {
 pub fn set_autostart(enabled: bool) -> Result<(), String> {
     let key = run_key(KEY_SET_VALUE).ok_or("cannot open the Run registry key")?;
     let name = wide(RUN_VALUE);
+    let legacy = wide(LEGACY_RUN_VALUE);
+    unsafe { RegDeleteValueW(key, legacy.as_ptr()) };
     let status = unsafe {
         if enabled {
             let exe = std::env::current_exe().map_err(|e| e.to_string())?;

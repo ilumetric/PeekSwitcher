@@ -1,6 +1,6 @@
 [package]
 name = "pek-platform"
-description = "OS integration of PekSwitcher: global keyboard hook, input injection, layouts, sounds"
+description = "OS integration of PeekSwitcher: global keyboard hook, input injection, layouts, sounds"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

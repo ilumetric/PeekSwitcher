@@ -1,6 +1,6 @@
 [package]
 name = "pek-core"
-description = "Platform-independent engine of PekSwitcher: layouts, language model, switching and typo logic"
+description = "Platform-independent engine of PeekSwitcher: layouts, language model, switching and typo logic"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

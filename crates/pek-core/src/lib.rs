@@ -1,4 +1,4 @@
-//! PekSwitcher core: everything that does not depend on the operating system.
+//! PeekSwitcher core: everything that does not depend on the operating system.
 //!
 //! * [`keys`], [`layout`] — physical keys and keyboard layouts;
 //! * [`model`] with [`dict`], [`charmodel`], [`yo`] — language knowledge;

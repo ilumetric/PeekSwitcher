@@ -3518,22 +3518,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pek-core"
-version = "0.2.0"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "pek-platform"
-version = "0.2.0"
-dependencies = [
- "pek-core",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "pekswitcher"
+name = "peekswitcher"
 version = "0.2.0"
 dependencies = [
  "embed-resource",
@@ -3546,6 +3531,21 @@ dependencies = [
  "slint",
  "slint-build",
  "tray-icon",
+]
+
+[[package]]
+name = "pek-core"
+version = "0.2.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "pek-platform"
+version = "0.2.0"
+dependencies = [
+ "pek-core",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -28,7 +28,7 @@ fn wide(s: &str) -> Vec<u16> {
 impl Clipboard {
     pub fn new() -> Clipboard {
         unsafe {
-            let class = wide("PekSwitcherClipboard");
+            let class = wide("PeekSwitcherClipboard");
             let instance = GetModuleHandleW(std::ptr::null());
             let wc = WNDCLASSW {
                 style: 0,

@@ -1,4 +1,4 @@
-// PekSwitcher window: a ChatGPT-like main screen and a settings screen.
+// PeekSwitcher window: a ChatGPT-like main screen and a settings screen.
 
 export global Theme {
     in property <bool> dark: true;
@@ -900,7 +900,7 @@ component SettingsView inherits VerticalLayout {
                     spacing: 8px;
                     Label {
                         horizontal-stretch: 1;
-                        text: "PekSwitcher " + S.version + " · " + (S.en ? "Dictionaries: FrequencyWords (CC BY-SA 4.0), eyo-kernel (MIT). Icons: Lucide." : "Словари: FrequencyWords (CC BY-SA 4.0), eyo-kernel (MIT). Иконки: Lucide.");
+                        text: "PeekSwitcher " + S.version + " · " + (S.en ? "Dictionaries: FrequencyWords (CC BY-SA 4.0), eyo-kernel (MIT). Icons: Lucide." : "Словари: FrequencyWords (CC BY-SA 4.0), eyo-kernel (MIT). Иконки: Lucide.");
                         color: Theme.text3;
                         font-size: 11px;
                     }
@@ -933,7 +933,7 @@ export component MainWindow inherits Window {
     // Flipped by the app when the window is shown again: the software renderer only redraws
     // what changed, but Windows drops a hidden window's pixels, so the whole window must be dirty.
     in-out property <bool> repaint;
-    title: "PekSwitcher";
+    title: "PeekSwitcher";
     width: 600px;
     height: S.banner != "" ? 471px : 431px; // the warning banner adds a row
     background: Theme.bg;

@@ -27,7 +27,14 @@ impl Paths {
         let data = if writable(&local) {
             local
         } else {
-            std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or(exe_dir).join("PekSwitcher")
+            let appdata = std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or(exe_dir);
+            let data = appdata.join("PeekSwitcher");
+            // Settings saved before the rename (PekSwitcher) move over once.
+            let legacy = appdata.join("PekSwitcher");
+            if !data.exists() && legacy.is_dir() {
+                let _ = fs::rename(&legacy, &data);
+            }
+            data
         };
         let _ = fs::create_dir_all(&data);
         Paths { resources, data }

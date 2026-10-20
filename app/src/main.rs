@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-//! PekSwitcher app: native window (Slint), tray icon and settings persistence around the switcher.
+//! PeekSwitcher app: native window (Slint), tray icon and settings persistence around the switcher.
 
 mod paths;
 mod tray;
@@ -13,7 +13,7 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 slint::include_modules!();
 
-const TITLE: &str = "PekSwitcher";
+const TITLE: &str = "PeekSwitcher";
 /// Window size in logical pixels, as in app.slint.
 const WIDTH: f32 = 600.0;
 const HEIGHT: f32 = 431.0;
@@ -129,7 +129,7 @@ fn show_status(ui: &MainWindow, core: &Core) {
     let en = g.get_en();
     let mut banner = core.error.lock().unwrap().clone().unwrap_or_default();
     if banner.is_empty() && !core.settings().enabled {
-        banner = if en { "PekSwitcher is turned off." } else { "PekSwitcher отключён." }.into();
+        banner = if en { "PeekSwitcher is turned off." } else { "PeekSwitcher отключён." }.into();
     }
     if banner.is_empty() {
         let langs = pek_platform::available_langs();

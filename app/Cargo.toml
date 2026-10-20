@@ -1,14 +1,14 @@
 [package]
-name = "pekswitcher"
-description = "PekSwitcher — keyboard layout switcher"
+name = "peekswitcher"
+description = "PeekSwitcher — keyboard layout switcher"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
-# The executable keeps the product's spelling: PekSwitcher.exe
+# The executable keeps the product's spelling: PeekSwitcher.exe
 [[bin]]
-name = "PekSwitcher"
+name = "PeekSwitcher"
 path = "src/main.rs"
 
 [build-dependencies]

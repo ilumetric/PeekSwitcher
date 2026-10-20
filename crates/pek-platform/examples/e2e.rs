@@ -1,4 +1,4 @@
-//! End-to-end check against the running PekSwitcher app (start it first).
+//! End-to-end check against the running PeekSwitcher app (start it first).
 //!
 //! Opens a window with a standard Win32 edit box, types scan codes into it exactly like a
 //! physical keyboard would, and compares the resulting text. Typing stops immediately if
@@ -241,7 +241,7 @@ mod win {
             let main = CreateWindowExW(
                 WS_EX_TOPMOST,
                 class.as_ptr(),
-                wide("PekSwitcher e2e").as_ptr(),
+                wide("PeekSwitcher e2e").as_ptr(),
                 WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                 200,
                 200,

@@ -44,9 +44,9 @@ fn icon(layout: Option<Lang>, s: &Settings) -> Icon {
 
 fn texts(en: bool) -> [&'static str; 7] {
     if en {
-        ["Open PekSwitcher", "Enabled", "Auto mode", "Quit", "auto mode on", "auto mode off", "turned off"]
+        ["Open PeekSwitcher", "Enabled", "Auto mode", "Quit", "auto mode on", "auto mode off", "turned off"]
     } else {
-        ["Открыть PekSwitcher", "Включён", "Авторежим", "Выход", "авторежим включён", "авторежим выключен", "отключён"]
+        ["Открыть PeekSwitcher", "Включён", "Авторежим", "Выход", "авторежим включён", "авторежим выключен", "отключён"]
     }
 }
 
@@ -59,7 +59,7 @@ fn tooltip(en: bool, layout: Option<Lang>, s: &Settings) -> String {
     } else {
         t[5]
     };
-    format!("PekSwitcher · {} · {state}", crate::layout_code(layout))
+    format!("PeekSwitcher · {} · {state}", crate::layout_code(layout))
 }
 
 pub fn create(core: Arc<Core>) {
