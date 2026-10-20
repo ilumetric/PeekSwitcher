@@ -3519,7 +3519,7 @@ dependencies = [
 
 [[package]]
 name = "peekswitcher"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "embed-resource",
  "pek-core",
@@ -3535,14 +3535,14 @@ dependencies = [
 
 [[package]]
 name = "pek-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "pek-platform"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "pek-core",
  "windows-sys 0.61.2",
